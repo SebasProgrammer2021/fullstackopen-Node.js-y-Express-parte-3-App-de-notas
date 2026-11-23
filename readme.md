@@ -21,6 +21,47 @@ npm start
 ### iniciar app con npm en modo desarrollo
 npm run dev
 
+## variables de entorno multiplataforma con cross-env
+
+`cross-env` permite definir variables de entorno dentro de un script npm con la misma sintaxis en Windows, macOS y Linux. Esto evita depender de la sintaxis propia de cada terminal. En este proyecto se usa para establecer `NODE_ENV`:
+
+```json
+{
+  "scripts": {
+    "start": "cross-env NODE_ENV=production node index.js",
+    "dev": "cross-env NODE_ENV=development nodemon index.js",
+    "test": "cross-env NODE_ENV=test node --test"
+  }
+}
+```
+
+Así, la aplicación selecciona el modo de producción al iniciar, desarrollo al usar Nodemon y pruebas al ejecutar `npm test`. `cross-env` establece esa variable para el proceso que ejecuta el comando; no carga el archivo `.env` (esa tarea la realiza `dotenv`).
+
+Como el script `start` también invoca `cross-env`, el paquete está en `dependencies` para que esté disponible en el despliegue. Si solo se utilizara en los scripts de desarrollo y pruebas, podría estar en `devDependencies`.
+
+## pruebas del backend con Supertest
+
+Supertest es una librería para probar endpoints HTTP desde pruebas automatizadas de Node.js. Permite enviar solicitudes a la aplicación Express y comprobar respuestas como el código de estado, los encabezados y el cuerpo, sin tener que iniciar manualmente un servidor en un puerto fijo ni usar Postman.
+
+En este proyecto, `app.js` exporta la aplicación Express. Las pruebas pueden pasar esa aplicación a Supertest y hacer solicitudes directamente:
+
+```js
+const { test } = require('node:test')
+const supertest = require('supertest')
+const app = require('../app')
+
+const api = supertest(app)
+
+test('GET /api/notes responds with JSON', async () => {
+  await api
+    .get('/api/notes')
+    .expect(200)
+    .expect('Content-Type', /application\/json/)
+})
+```
+
+La prueba anterior es un ejemplo: para endpoints que consultan o modifican notas, el test también debe conectarse a la base de datos de prueba y cerrarla al terminar. El script `npm test` establece `NODE_ENV=test`, para que `utils/config.js` seleccione `TEST_MONGODB_URI`.
+
 ### ejecutar script de Mongo con contraseña
 node mongo.js contraseña
 
